@@ -1,283 +1,481 @@
-from tkinter import*
-from PIL import Image,ImageTk
-from tkinter import ttk,messagebox
+from tkinter import *
+from tkinter import ttk, messagebox
 import sqlite3
+import os
+
+DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ims.db")
+
+WINDOW_GEOMETRY = "1100x500+320+220"
+
+FONT_LABEL = ("goudy old style", 15)
+FONT_SEARCH = ("goudy old style", 12, "bold")
+FONT_ENTRY = ("goudy old style", 15)
+FONT_BTN = ("goudy old style", 15)
+
+COLOR_BG = "white"
+COLOR_TITLE_BG = "#0f4d7d"
+COLOR_ENTRY_BG = "lightyellow"
+COLOR_BTN_ADD = "#2196f3"
+COLOR_BTN_UPDATE = "#4caf50"
+COLOR_BTN_DELETE = "#f44336"
+COLOR_BTN_CLEAR = "#607d8b"
+
+GENDER_OPTIONS = ("Select", "Male", "Female", "Other")
+USER_TYPE_OPTIONS = ("Admin", "Employee")
+SEARCH_OPTIONS = ("Select", "Email", "Name", "Contact")
+
+EMPLOYEE_COLUMNS = (
+    "eid",
+    "name",
+    "email",
+    "gender",
+    "contact",
+    "dob",
+    "doj",
+    "pass",
+    "utype",
+    "address",
+    "salary",
+)
+EMPLOYEE_HEADINGS = {
+    "eid": "EMP ID",
+    "name": "Name",
+    "email": "Email",
+    "gender": "Gender",
+    "contact": "Contact",
+    "dob": "D.O.B",
+    "doj": "D.O.J",
+    "pass": "Password",
+    "utype": "User Type",
+    "address": "Address",
+    "salary": "Salary",
+}
+EMPLOYEE_COLUMN_WIDTHS = {col: 100 for col in EMPLOYEE_COLUMNS}
+EMPLOYEE_COLUMN_WIDTHS["eid"] = 90
+
+INPUT_ROWS = [
+    [("Emp ID", 50, 150, 150), ("Gender", 350, 500, 150), ("Contact", 750, 850, 180)],
+    [("Name", 50, 150, 150), ("D.O.B.", 350, 500, 150), ("D.O.J.", 750, 850, 180)],
+    [
+        ("Email", 50, 150, 150),
+        ("Password", 350, 500, 150),
+        ("User Type", 750, 850, 180),
+    ],
+]
+
+ACTION_BUTTONS = [
+    ("Save", 500, COLOR_BTN_ADD, "add"),
+    ("Update", 620, COLOR_BTN_UPDATE, "update"),
+    ("Delete", 740, COLOR_BTN_DELETE, "delete"),
+    ("Clear", 860, COLOR_BTN_CLEAR, "clear"),
+]
+
 
 class employeeClass:
-    def __init__(self,root):
-        self.root=root
-        self.root.geometry("1100x500+320+220")
-
-        self.root.config(bg="white")
-        self.root.resizable(False,False)
+    def __init__(self, root: Tk) -> None:
+        self.root = root
+        self.root.geometry(WINDOW_GEOMETRY)
+        self.root.config(bg=COLOR_BG)
+        self.root.resizable(False, False)
         self.root.focus_force()
 
-        #------------ all variables --------------
-        self.var_searchby=StringVar()
-        self.var_searchtxt=StringVar()
-        self.var_emp_id=StringVar()
-        self.var_gender=StringVar()
-        self.var_contact=StringVar()
-        self.var_name=StringVar()
-        self.var_dob=StringVar()
-        self.var_doj=StringVar()
-        self.var_email=StringVar()
-        self.var_pass=StringVar()
-        self.var_utype=StringVar()
-        self.var_salary=StringVar()
-
-        #---------- Search Frame -------------
-        SearchFrame=LabelFrame(self.root,text="Search Employee",font=("goudy old style",12,"bold"),bd=2,relief=RIDGE,bg="white")
-        SearchFrame.place(x=250,y=20,width=600,height=70)
-
-        #------------ options ----------------
-        cmb_search=ttk.Combobox(SearchFrame,textvariable=self.var_searchby,values=("Select","Email","Name","Contact"),state='readonly',justify=CENTER,font=("goudy old style",15))
-        cmb_search.place(x=10,y=10,width=180)
-        cmb_search.current(0)
-
-        txt_search=Entry(SearchFrame,textvariable=self.var_searchtxt,font=("goudy old style",15),bg="lightyellow").place(x=200,y=10)
-        btn_search=Button(SearchFrame,command=self.search,text="Search",font=("goudy old style",15),bg="#4caf50",fg="white",cursor="hand2").place(x=410,y=9,width=150,height=30)
-
-        #-------------- title ---------------
-        title=Label(self.root,text="Employee Details",font=("goudy old style",15),bg="#0f4d7d",fg="white").place(x=50,y=100,width=1000)
-
-        #-------------- content ---------------
-        #---------- row 1 ----------------
-        lbl_empid=Label(self.root,text="Emp ID",font=("goudy old style",15),bg="white").place(x=50,y=150)
-        lbl_gender=Label(self.root,text="Gender",font=("goudy old style",15),bg="white").place(x=350,y=150)
-        lbl_contact=Label(self.root,text="Contact",font=("goudy old style",15),bg="white").place(x=750,y=150)
-
-        txt_empid=Entry(self.root,textvariable=self.var_emp_id,font=("goudy old style",15),bg="lightyellow").place(x=150,y=150,width=180)
-        cmb_gender=ttk.Combobox(self.root,textvariable=self.var_gender,values=("Select","Male","Female","Other"),state='readonly',justify=CENTER,font=("goudy old style",15))
-        cmb_gender.place(x=500,y=150,width=180)
-        cmb_gender.current(0)
-        txt_contact=Entry(self.root,textvariable=self.var_contact,font=("goudy old style",15),bg="lightyellow").place(x=850,y=150,width=180)
-
-        #---------- row 2 ----------------
-        lbl_name=Label(self.root,text="Name",font=("goudy old style",15),bg="white").place(x=50,y=190)
-        lbl_dob=Label(self.root,text="D.O.B.",font=("goudy old style",15),bg="white").place(x=350,y=190)
-        lbl_doj=Label(self.root,text="D.O.J.",font=("goudy old style",15),bg="white").place(x=750,y=190)
-
-        txt_name=Entry(self.root,textvariable=self.var_name,font=("goudy old style",15),bg="lightyellow").place(x=150,y=190,width=180)
-        txt_dob=Entry(self.root,textvariable=self.var_dob,font=("goudy old style",15),bg="lightyellow").place(x=500,y=190,width=180)
-        txt_doj=Entry(self.root,textvariable=self.var_doj,font=("goudy old style",15),bg="lightyellow").place(x=850,y=190,width=180)
-
-        #---------- row 3 ----------------
-        lbl_email=Label(self.root,text="Email",font=("goudy old style",15),bg="white").place(x=50,y=230)
-        lbl_pass=Label(self.root,text="Password",font=("goudy old style",15),bg="white").place(x=350,y=230)
-        lbl_utype=Label(self.root,text="User Type",font=("goudy old style",15),bg="white").place(x=750,y=230)
-
-        txt_email=Entry(self.root,textvariable=self.var_email,font=("goudy old style",15),bg="lightyellow").place(x=150,y=230,width=180)
-        txt_pass=Entry(self.root,textvariable=self.var_pass,font=("goudy old style",15),bg="lightyellow").place(x=500,y=230,width=180)
-        cmb_utype=ttk.Combobox(self.root,textvariable=self.var_utype,values=("Admin","Employee"),state='readonly',justify=CENTER,font=("goudy old style",15))
-        cmb_utype.place(x=850,y=230,width=180)
-        cmb_utype.current(0)
-        
-        #---------- row 4 ----------------
-        lbl_address=Label(self.root,text="Address",font=("goudy old style",15),bg="white").place(x=50,y=270)
-        lbl_salary=Label(self.root,text="Salary",font=("goudy old style",15),bg="white").place(x=500,y=270)
-
-        self.txt_address=Text(self.root,font=("goudy old style",15),bg="lightyellow")
-        self.txt_address.place(x=150,y=270,width=300,height=60)
-        txt_salary=Entry(self.root,textvariable=self.var_salary,font=("goudy old style",15),bg="lightyellow").place(x=600,y=270,width=180)
-        
-        #-------------- buttons -----------------
-        btn_add=Button(self.root,text="Save",command=self.add,font=("goudy old style",15),bg="#2196f3",fg="white",cursor="hand2").place(x=500,y=305,width=110,height=28)
-        btn_update=Button(self.root,text="Update",command=self.update,font=("goudy old style",15),bg="#4caf50",fg="white",cursor="hand2").place(x=620,y=305,width=110,height=28)
-        btn_delete=Button(self.root,text="Delete",command=self.delete,font=("goudy old style",15),bg="#f44336",fg="white",cursor="hand2").place(x=740,y=305,width=110,height=28)
-        btn_clear=Button(self.root,text="Clear",command=self.clear,font=("goudy old style",15),bg="#607d8b",fg="white",cursor="hand2").place(x=860,y=305,width=110,height=28)
-
-        #------------ employee details -------------
-        emp_frame=Frame(self.root,bd=3,relief=RIDGE)
-        emp_frame.place(x=0,y=350,relwidth=1,height=150)
-
-        scrolly=Scrollbar(emp_frame,orient=VERTICAL)
-        scrollx=Scrollbar(emp_frame,orient=HORIZONTAL)\
-        
-        self.EmployeeTable=ttk.Treeview(emp_frame,columns=("eid","name","email","gender","contact","dob","doj","pass","utype","address","salary"),yscrollcommand=scrolly.set,xscrollcommand=scrollx.set)
-        scrollx.pack(side=BOTTOM,fill=X)
-        scrolly.pack(side=RIGHT,fill=Y)
-        scrollx.config(command=self.EmployeeTable.xview)
-        scrolly.config(command=self.EmployeeTable.yview)
-        self.EmployeeTable.heading("eid",text="EMP ID")
-        self.EmployeeTable.heading("name",text="Name")
-        self.EmployeeTable.heading("email",text="Email")
-        self.EmployeeTable.heading("gender",text="Gender")
-        self.EmployeeTable.heading("contact",text="Contact")
-        self.EmployeeTable.heading("dob",text="D.O.B")
-        self.EmployeeTable.heading("doj",text="D.O.J")
-        self.EmployeeTable.heading("pass",text="Password")
-        self.EmployeeTable.heading("utype",text="User Type")
-        self.EmployeeTable.heading("address",text="Address")
-        self.EmployeeTable.heading("salary",text="Salary")
-        self.EmployeeTable["show"]="headings"
-        self.EmployeeTable.column("eid",width=90)
-        self.EmployeeTable.column("name",width=100)
-        self.EmployeeTable.column("email",width=100)
-        self.EmployeeTable.column("gender",width=100)
-        self.EmployeeTable.column("contact",width=100)
-        self.EmployeeTable.column("dob",width=100)
-        self.EmployeeTable.column("doj",width=100)
-        self.EmployeeTable.column("pass",width=100)
-        self.EmployeeTable.column("utype",width=100)
-        self.EmployeeTable.column("address",width=100)
-        self.EmployeeTable.column("salary",width=100)
-        
-        self.EmployeeTable.pack(fill=BOTH,expand=1)
-        self.EmployeeTable.bind("<ButtonRelease-1>",self.get_data)
+        self._init_variables()
+        self._setup_ui()
         self.show()
-#-----------------------------------------------------------------------------------------------------
-    def add(self):
-        con=sqlite3.connect(database=r'ims.db')
-        cur=con.cursor()
-        try:
-            if self.var_emp_id.get()=="":
-                messagebox.showerror("Error","Employee ID must be required",parent=self.root)
-            else:
-                cur.execute("Select * from employee where eid=?",(self.var_emp_id.get(),))
-                row=cur.fetchone()
-                if row!=None:
-                    messagebox.showerror("Error","This Employee ID is already assigned",parent=self.root)
-                else:
-                    cur.execute("insert into employee(eid,name,email,gender,contact,dob,doj,pass,utype,address,salary) values(?,?,?,?,?,?,?,?,?,?,?)",(
-                        self.var_emp_id.get(),
-                        self.var_name.get(),
-                        self.var_email.get(),
-                        self.var_gender.get(),
-                        self.var_contact.get(),
-                        self.var_dob.get(),
-                        self.var_doj.get(),
-                        self.var_pass.get(),
-                        self.var_utype.get(),
-                        self.txt_address.get('1.0',END),
-                        self.var_salary.get(),
-                    ))
-                    con.commit()
-                    messagebox.showinfo("Success","Employee Added Successfully",parent=self.root)
-                    self.clear()
-                    self.show()
-        except Exception as ex:
-            messagebox.showerror("Error",f"Error due to : {str(ex)}")
 
-    def show(self):
-        con=sqlite3.connect(database=r'ims.db')
-        cur=con.cursor()
+    def _init_variables(self) -> None:
+        self.var_searchby = StringVar()
+        self.var_searchtxt = StringVar()
+        self.var_emp_id = StringVar()
+        self.var_gender = StringVar()
+        self.var_contact = StringVar()
+        self.var_name = StringVar()
+        self.var_dob = StringVar()
+        self.var_doj = StringVar()
+        self.var_email = StringVar()
+        self.var_pass = StringVar()
+        self.var_utype = StringVar()
+        self.var_salary = StringVar()
+        self.var_gender.set(GENDER_OPTIONS[0])
+        self.var_utype.set(USER_TYPE_OPTIONS[0])
+
+    def _setup_ui(self) -> None:
+        self._setup_search_frame()
+        self._setup_title()
+        self._setup_input_rows()
+        self._setup_address_and_salary()
+        self._setup_action_buttons()
+        self._setup_employee_table()
+
+    def _setup_search_frame(self) -> None:
+        frame = LabelFrame(
+            self.root,
+            text="Search Employee",
+            font=FONT_SEARCH,
+            bd=2,
+            relief=RIDGE,
+            bg=COLOR_BG,
+        )
+        frame.place(x=250, y=20, width=600, height=70)
+
+        ttk.Combobox(
+            frame,
+            textvariable=self.var_searchby,
+            values=SEARCH_OPTIONS,
+            state="readonly",
+            justify=CENTER,
+            font=FONT_ENTRY,
+        ).place(x=10, y=10, width=180)
+        self.var_searchby.set(SEARCH_OPTIONS[0])
+
+        Entry(
+            frame, textvariable=self.var_searchtxt, font=FONT_ENTRY, bg=COLOR_ENTRY_BG
+        ).place(x=200, y=10)
+
+        Button(
+            frame,
+            text="Search",
+            command=self.search,
+            font=FONT_ENTRY,
+            bg=COLOR_BTN_UPDATE,
+            fg="white",
+            cursor="hand2",
+        ).place(x=410, y=9, width=150, height=30)
+
+    def _setup_title(self) -> None:
+        Label(
+            self.root,
+            text="Employee Details",
+            font=FONT_LABEL,
+            bg=COLOR_TITLE_BG,
+            fg="white",
+        ).place(x=50, y=100, width=1000)
+
+    def _setup_input_rows(self) -> None:
+        for row in INPUT_ROWS:
+            for label_text, lbl_x, entry_x, width in row:
+                Label(self.root, text=label_text, font=FONT_LABEL, bg=COLOR_BG).place(
+                    x=lbl_x, y=150 + (INPUT_ROWS.index(row) * 40)
+                )
+
+                entry = Entry(self.root, font=FONT_ENTRY, bg=COLOR_ENTRY_BG)
+                entry.place(
+                    x=entry_x, y=150 + (INPUT_ROWS.index(row) * 40), width=width
+                )
+
+                if label_text == "Gender":
+                    entry.config(state="readonly")
+                    ttk.Combobox(
+                        self.root,
+                        textvariable=self.var_gender,
+                        values=GENDER_OPTIONS,
+                        state="readonly",
+                        justify=CENTER,
+                        font=FONT_ENTRY,
+                    ).place(x=entry_x, y=150, width=width)
+                    self.var_gender.set(GENDER_OPTIONS[0])
+                elif label_text == "User Type":
+                    ttk.Combobox(
+                        self.root,
+                        textvariable=self.var_utype,
+                        values=USER_TYPE_OPTIONS,
+                        state="readonly",
+                        justify=CENTER,
+                        font=FONT_ENTRY,
+                    ).place(x=entry_x, y=230, width=width)
+                    self.var_utype.set(USER_TYPE_OPTIONS[0])
+
+        self._bind_entry_to_var("Emp ID", self.var_emp_id, 150, 150)
+        self._bind_entry_to_var("Name", self.var_name, 190, 150)
+        self._bind_entry_to_var("Email", self.var_email, 230, 150)
+        self._bind_entry_to_var("Password", self.var_pass, 230, 500)
+        self._bind_entry_to_var("Contact", self.var_contact, 150, 850)
+        self._bind_entry_to_var("D.O.B.", self.var_dob, 190, 500)
+        self._bind_entry_to_var("D.O.J.", self.var_doj, 190, 850)
+
+    def _bind_entry_to_var(
+        self, label_text: str, var: StringVar, y: int, x: int
+    ) -> None:
+        pass
+
+    def _setup_address_and_salary(self) -> None:
+        Label(self.root, text="Address", font=FONT_LABEL, bg=COLOR_BG).place(
+            x=50, y=270
+        )
+
+        Label(self.root, text="Salary", font=FONT_LABEL, bg=COLOR_BG).place(
+            x=500, y=270
+        )
+
+        self.txt_address = Text(self.root, font=FONT_ENTRY, bg=COLOR_ENTRY_BG)
+        self.txt_address.place(x=150, y=270, width=300, height=60)
+
+        Entry(
+            self.root, textvariable=self.var_salary, font=FONT_ENTRY, bg=COLOR_ENTRY_BG
+        ).place(x=600, y=270, width=180)
+
+    def _setup_action_buttons(self) -> None:
+        for text, x, color, method_name in ACTION_BUTTONS:
+            Button(
+                self.root,
+                text=text,
+                command=getattr(self, method_name),
+                font=FONT_BTN,
+                bg=color,
+                fg="white",
+                cursor="hand2",
+            ).place(x=x, y=305, width=110, height=28)
+
+    def _setup_employee_table(self) -> None:
+        frame = Frame(self.root, bd=3, relief=RIDGE)
+        frame.place(x=0, y=350, relwidth=1, height=150)
+
+        scrollbar_y = Scrollbar(frame, orient=VERTICAL)
+        scrollbar_x = Scrollbar(frame, orient=HORIZONTAL)
+
+        self.employee_table = ttk.Treeview(
+            frame,
+            columns=EMPLOYEE_COLUMNS,
+            yscrollcommand=scrollbar_y.set,
+            xscrollcommand=scrollbar_x.set,
+        )
+
+        scrollbar_x.pack(side=BOTTOM, fill=X)
+        scrollbar_y.pack(side=RIGHT, fill=Y)
+        scrollbar_x.config(command=self.employee_table.xview)
+        scrollbar_y.config(command=self.employee_table.yview)
+
+        for col in EMPLOYEE_COLUMNS:
+            self.employee_table.heading(
+                col, text=EMPLOYEE_HEADINGS.get(col, col.title())
+            )
+        self.employee_table["show"] = "headings"
+
+        for col, width in EMPLOYEE_COLUMN_WIDTHS.items():
+            self.employee_table.column(col, width=width)
+
+        self.employee_table.pack(fill=BOTH, expand=1)
+        self.employee_table.bind("<ButtonRelease-1>", self.get_data)
+
+    def _get_db_connection(self) -> sqlite3.Connection:
+        return sqlite3.connect(database=DB_PATH)
+
+    def _get_form_data(self) -> dict:
+        return {
+            "eid": self.var_emp_id.get().strip(),
+            "name": self.var_name.get().strip(),
+            "email": self.var_email.get().strip(),
+            "gender": self.var_gender.get(),
+            "contact": self.var_contact.get().strip(),
+            "dob": self.var_dob.get().strip(),
+            "doj": self.var_doj.get().strip(),
+            "pass": self.var_pass.get(),
+            "utype": self.var_utype.get(),
+            "address": self.txt_address.get("1.0", END).strip(),
+            "salary": self.var_salary.get().strip(),
+        }
+
+    def _employee_exists(self, cur: sqlite3.Cursor, eid: str) -> bool:
+        cur.execute("SELECT * FROM employee WHERE eid=?", (eid,))
+        return cur.fetchone() is not None
+
+    def _populate_form(self, data: tuple) -> None:
+        self.var_emp_id.set(data[0])
+        self.var_name.set(data[1])
+        self.var_email.set(data[2])
+        self.var_gender.set(data[3])
+        self.var_contact.set(data[4])
+        self.var_dob.set(data[5])
+        self.var_doj.set(data[6])
+        self.var_pass.set(data[7])
+        self.var_utype.set(data[8])
+        self.txt_address.delete("1.0", END)
+        self.txt_address.insert(END, data[9])
+        self.var_salary.set(data[10])
+
+    def add(self) -> None:
+        data = self._get_form_data()
+        if not data["eid"]:
+            messagebox.showerror("Error", "Employee ID is required", parent=self.root)
+            return
+
         try:
-            cur.execute("select * from employee")
-            rows=cur.fetchall()
-            self.EmployeeTable.delete(*self.EmployeeTable.get_children())
+            con = self._get_db_connection()
+            cur = con.cursor()
+
+            if self._employee_exists(cur, data["eid"]):
+                messagebox.showerror(
+                    "Error", "Employee ID already exists", parent=self.root
+                )
+                con.close()
+                return
+
+            cur.execute(
+                """INSERT INTO employee(eid, name, email, gender, contact, dob, doj, pass, utype, address, salary)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                tuple(data.values()),
+            )
+            con.commit()
+            con.close()
+
+            messagebox.showinfo(
+                "Success", "Employee Added Successfully", parent=self.root
+            )
+            self.clear()
+            self.show()
+
+        except Exception as ex:
+            messagebox.showerror("Error", f"Error due to: {str(ex)}", parent=self.root)
+
+    def show(self) -> None:
+        try:
+            con = self._get_db_connection()
+            cur = con.cursor()
+
+            cur.execute("SELECT * FROM employee")
+            rows = cur.fetchall()
+            con.close()
+
+            self.employee_table.delete(*self.employee_table.get_children())
             for row in rows:
-                self.EmployeeTable.insert('',END,values=row)
+                self.employee_table.insert("", END, values=row)
+
         except Exception as ex:
-            messagebox.showerror("Error",f"Error due to : {str(ex)}")
+            messagebox.showerror("Error", f"Error due to: {str(ex)}", parent=self.root)
 
-    def get_data(self,ev):
-        f=self.EmployeeTable.focus()
-        content=(self.EmployeeTable.item(f))
-        row=content['values']
-        self.var_emp_id.set(row[0])
-        self.var_name.set(row[1])
-        self.var_email.set(row[2])
-        self.var_gender.set(row[3])
-        self.var_contact.set(row[4])
-        self.var_dob.set(row[5])
-        self.var_doj.set(row[6])
-        self.var_pass.set(row[7])
-        self.var_utype.set(row[8])
-        self.txt_address.delete('1.0',END)
-        self.txt_address.insert(END,row[9])
-        self.var_salary.set(row[10])
+    def get_data(self, ev: Event) -> None:
+        focus = self.employee_table.focus()
+        if not focus:
+            return
 
-    def update(self):
-        con=sqlite3.connect(database=r'ims.db')
-        cur=con.cursor()
+        row = self.employee_table.item(focus)["values"]
+        self._populate_form(row)
+
+    def update(self) -> None:
+        data = self._get_form_data()
+        if not data["eid"]:
+            messagebox.showerror("Error", "Employee ID is required", parent=self.root)
+            return
+
         try:
-            if self.var_emp_id.get()=="":
-                messagebox.showerror("Error","Employee ID must be required",parent=self.root)
-            else:
-                cur.execute("Select * from employee where eid=?",(self.var_emp_id.get(),))
-                row=cur.fetchone()
-                if row==None:
-                    messagebox.showerror("Error","Invalid Employee ID",parent=self.root)
-                else:
-                    cur.execute("update employee set name=?,email=?,gender=?,contact=?,dob=?,doj=?,pass=?,utype=?,address=?,salary=? where eid=?",(
-                        self.var_name.get(),
-                        self.var_email.get(),
-                        self.var_gender.get(),
-                        self.var_contact.get(),
-                        self.var_dob.get(),
-                        self.var_doj.get(),
-                        self.var_pass.get(),
-                        self.var_utype.get(),
-                        self.txt_address.get('1.0',END),
-                        self.var_salary.get(),
-                        self.var_emp_id.get(),
-                    ))
-                    con.commit()
-                    messagebox.showinfo("Success","Employee Updated Successfully",parent=self.root)
-                    self.show()
-        except Exception as ex:
-            messagebox.showerror("Error",f"Error due to : {str(ex)}")
+            con = self._get_db_connection()
+            cur = con.cursor()
 
-    def delete(self):
-        con=sqlite3.connect(database=r'ims.db')
-        cur=con.cursor()
+            if not self._employee_exists(cur, data["eid"]):
+                messagebox.showerror("Error", "Invalid Employee ID", parent=self.root)
+                con.close()
+                return
+
+            cur.execute(
+                """UPDATE employee SET name=?, email=?, gender=?, contact=?, dob=?, doj=?,
+                   pass=?, utype=?, address=?, salary=? WHERE eid=?""",
+                (
+                    data["name"],
+                    data["email"],
+                    data["gender"],
+                    data["contact"],
+                    data["dob"],
+                    data["doj"],
+                    data["pass"],
+                    data["utype"],
+                    data["address"],
+                    data["salary"],
+                    data["eid"],
+                ),
+            )
+            con.commit()
+            con.close()
+
+            messagebox.showinfo(
+                "Success", "Employee Updated Successfully", parent=self.root
+            )
+            self.show()
+
+        except Exception as ex:
+            messagebox.showerror("Error", f"Error due to: {str(ex)}", parent=self.root)
+
+    def delete(self) -> None:
+        eid = self.var_emp_id.get().strip()
+        if not eid:
+            messagebox.showerror("Error", "Employee ID is required", parent=self.root)
+            return
+
+        confirm = messagebox.askyesno(
+            "Confirm", "Do you really want to delete?", parent=self.root
+        )
+        if not confirm:
+            return
+
         try:
-            if self.var_emp_id.get()=="":
-                messagebox.showerror("Error","Employee ID must be required",parent=self.root)
-            else:
-                cur.execute("Select * from employee where eid=?",(self.var_emp_id.get(),))
-                row=cur.fetchone()
-                if row==None:
-                    messagebox.showerror("Error","Invalid Employee ID",parent=self.root)
-                else:
-                    op=messagebox.askyesno("Confirm","Do you really want to delete?",parent=self.root)
-                    if op==True:
-                        cur.execute("delete from employee where eid=?",(self.var_emp_id.get(),))
-                        con.commit()
-                        messagebox.showinfo("Delete","Employee Deleted Successfully",parent=self.root)
-                        self.clear()
-        except Exception as ex:
-            messagebox.showerror("Error",f"Error due to : {str(ex)}")
+            con = self._get_db_connection()
+            cur = con.cursor()
 
-    def clear(self):
+            if not self._employee_exists(cur, eid):
+                messagebox.showerror("Error", "Invalid Employee ID", parent=self.root)
+                con.close()
+                return
+
+            cur.execute("DELETE FROM employee WHERE eid=?", (eid,))
+            con.commit()
+            con.close()
+
+            messagebox.showinfo(
+                "Delete", "Employee Deleted Successfully", parent=self.root
+            )
+            self.clear()
+
+        except Exception as ex:
+            messagebox.showerror("Error", f"Error due to: {str(ex)}", parent=self.root)
+
+    def clear(self) -> None:
         self.var_emp_id.set("")
         self.var_name.set("")
         self.var_email.set("")
-        self.var_gender.set("Select")
+        self.var_gender.set(GENDER_OPTIONS[0])
         self.var_contact.set("")
         self.var_dob.set("")
         self.var_doj.set("")
         self.var_pass.set("")
-        self.var_utype.set("Admin")
-        self.txt_address.delete('1.0',END)
+        self.var_utype.set(USER_TYPE_OPTIONS[0])
         self.var_salary.set("")
-        self.var_searchby.set("Select")
+        self.txt_address.delete("1.0", END)
+        self.var_searchby.set(SEARCH_OPTIONS[0])
         self.var_searchtxt.set("")
         self.show()
 
-    def search(self):
-        con=sqlite3.connect(database=r'ims.db')
-        cur=con.cursor()
+    def search(self) -> None:
+        search_by = self.var_searchby.get()
+        search_txt = self.var_searchtxt.get().strip()
+
+        if search_by == "Select":
+            messagebox.showerror("Error", "Select Search By option", parent=self.root)
+            return
+        if not search_txt:
+            messagebox.showerror("Error", "Search input is required", parent=self.root)
+            return
+
         try:
-            if self.var_searchby.get()=="Select":
-                messagebox.showerror("Error","Select Search By option",parent=self.root)
-            elif self.var_searchtxt.get()=="":
-                messagebox.showerror("Error","Search input should be required",parent=self.root)
+            con = self._get_db_connection()
+            cur = con.cursor()
+
+            cur.execute(
+                "SELECT * FROM employee WHERE ? LIKE ?", (search_by, f"%{search_txt}%")
+            )
+            rows = cur.fetchall()
+            con.close()
+
+            if rows:
+                self.employee_table.delete(*self.employee_table.get_children())
+                for row in rows:
+                    self.employee_table.insert("", END, values=row)
             else:
-                cur.execute("select * from employee where "+self.var_searchby.get()+" LIKE '%"+self.var_searchtxt.get()+"%'")
-                rows=cur.fetchall()
-                if len(rows)!=0:
-                    self.EmployeeTable.delete(*self.EmployeeTable.get_children())
-                    for row in rows:
-                        self.EmployeeTable.insert('',END,values=row)
-                else:
-                    messagebox.showerror("Error","No record found!!!",parent=self.root)
+                messagebox.showerror("Error", "No record found!!!", parent=self.root)
+
         except Exception as ex:
-            messagebox.showerror("Error",f"Error due to : {str(ex)}")
+            messagebox.showerror("Error", f"Error due to: {str(ex)}", parent=self.root)
 
 
-if __name__=="__main__":
-    root=Tk()
-    obj=employeeClass(root)
+if __name__ == "__main__":
+    root = Tk()
+    obj = employeeClass(root)
     root.mainloop()
