@@ -1,7 +1,9 @@
 from tkinter import *
-from tkinter import ttk, messagebox
+from tkinter import ttk, messagebox, filedialog
 import sqlite3
 import os
+import csv
+import datetime
 
 DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ims.db")
 
@@ -19,6 +21,7 @@ COLOR_BTN_ADD = "#2196f3"
 COLOR_BTN_UPDATE = "#4caf50"
 COLOR_BTN_DELETE = "#f44336"
 COLOR_BTN_CLEAR = "#607d8b"
+COLOR_BTN_EXPORT = "#9c27b0"
 
 GENDER_OPTIONS = ("Select", "Male", "Female", "Other")
 USER_TYPE_OPTIONS = ("Admin", "Employee")
@@ -140,7 +143,17 @@ class employeeClass:
             bg=COLOR_BTN_UPDATE,
             fg="white",
             cursor="hand2",
-        ).place(x=410, y=9, width=150, height=30)
+        ).place(x=410, y=9, width=100, height=30)
+
+        Button(
+            frame,
+            text="Export CSV",
+            command=self.export_to_csv,
+            font=FONT_ENTRY,
+            bg=COLOR_BTN_EXPORT,
+            fg="white",
+            cursor="hand2",
+        ).place(x=520, y=9, width=70, height=30)
 
     def _setup_title(self) -> None:
         Label(
@@ -471,6 +484,53 @@ class employeeClass:
             else:
                 messagebox.showerror("Error", "No record found!!!", parent=self.root)
 
+        except Exception as ex:
+            messagebox.showerror("Error", f"Error due to: {str(ex)}", parent=self.root)
+
+    def export_to_csv(self) -> None:
+        file_path = filedialog.asksaveasfilename(
+            title="Export Employees to CSV",
+            defaultextension=".csv",
+            filetypes=[("CSV files", "*.csv"), ("All files", "*.*")],
+        )
+
+        if not file_path:
+            return
+
+        try:
+            con = self._get_db_connection()
+            cur = con.cursor()
+            cur.execute("SELECT * FROM employee")
+            rows = cur.fetchall()
+            con.close()
+
+            if not rows:
+                messagebox.showwarning(
+                    "Warning", "No employees to export", parent=self.root
+                )
+                return
+
+            headers = (
+                [description[0] for description in cur.description] if rows else []
+            )
+
+            with open(file_path, "w", newline="", encoding="utf-8") as csvfile:
+                writer = csv.writer(csvfile)
+                writer.writerow(headers)
+                writer.writerows(rows)
+
+            messagebox.showinfo(
+                "Success",
+                f"Exported {len(rows)} employee(s) to CSV successfully!",
+                parent=self.root,
+            )
+
+        except PermissionError:
+            messagebox.showerror(
+                "Error",
+                "Permission denied. Please close the file if it's open.",
+                parent=self.root,
+            )
         except Exception as ex:
             messagebox.showerror("Error", f"Error due to: {str(ex)}", parent=self.root)
 
