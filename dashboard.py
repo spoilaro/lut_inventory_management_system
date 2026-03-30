@@ -254,11 +254,8 @@ class IMS:
         self.lbl_clock.after(200, self.update_content)
 
     def update_sales_count(self) -> None:
-        try:
-            bill_count = len(os.listdir(BILL_DIR))
-            self.stat_labels["sales"].config(text=f"Total Sales\n[ {bill_count} ]")
-        except Exception:
-            pass
+        bill_count = len(os.listdir(BILL_DIR))
+        self.stat_labels["sales"].config(text=f"Total Sales\n[ {bill_count} ]")
 
 
 if __name__ == "__main__":
