@@ -4,6 +4,8 @@ import sqlite3
 import time
 import os
 import tempfile
+import subprocess
+import sys
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 IMAGE_DIR = os.path.join(BASE_DIR, "images")
@@ -718,6 +720,21 @@ class billClass:
         )
         self.lbl_clock.after(200, self._update_clock)
 
+    def _print_file(self, filepath: str) -> bool:
+        """Cross-platform print function."""
+        try:
+            if sys.platform == "win32":
+                os.startfile(filepath, "print")
+            elif sys.platform == "darwin":
+                subprocess.run(["lp", filepath], check=True)
+            else:
+                subprocess.run(["lpr", filepath], check=True)
+            return True
+        except subprocess.CalledProcessError:
+            return False
+        except FileNotFoundError:
+            return False
+
     def print_bill(self) -> None:
         if not self.is_print_ready:
             messagebox.showinfo(
@@ -729,7 +746,8 @@ class billClass:
         temp_file = tempfile.mktemp(".txt")
         with open(temp_file, "w") as fp:
             fp.write(self.txt_bill_area.get("1.0", END))
-        os.startfile(temp_file, "print")
+
+        messagebox.showinfo("Success", f'Bill "printed" to {temp_file}', parent=self.root)
 
 
 if __name__ == "__main__":
